@@ -42,13 +42,14 @@
  *   // => { months: -1, totalPaid: -1, totalInterest: -1 }
  */
 export function calculateEMI(principal, monthlyRate, emi) {
-    // Validation: all must be positive numbers
+
+    // Validation
     if (principal <= 0 || monthlyRate < 0 || emi <= 0 || 
         isNaN(principal) || isNaN(monthlyRate) || isNaN(emi)) {
         return { months: -1, totalPaid: -1, totalInterest: -1 };
     }
 
-    // Early check for infinite loop condition
+    //  check for infinite loop condition
     const firstMonthInterest = principal * monthlyRate;
     if (emi <= firstMonthInterest) {
         return { months: -1, totalPaid: -1, totalInterest: -1 };
@@ -62,14 +63,14 @@ export function calculateEMI(principal, monthlyRate, emi) {
     while (remaining > 0) {
         months++;
 
-        // Step 1: Calculate interest on current remaining balance
+        //  Calculate interest on current remaining balance
         const interestThisMonth = remaining * monthlyRate;
         totalInterest += interestThisMonth;
 
-        // Step 2: Add interest to remaining balance
+        //  Add interest to remaining balance
         remaining += interestThisMonth;
 
-        // Step 3: Decide how much to pay this month
+        //  Decide how much to pay this month
         let paymentThisMonth;
 
         if (remaining < emi) {
@@ -80,10 +81,10 @@ export function calculateEMI(principal, monthlyRate, emi) {
             paymentThisMonth = emi;
         }
 
-        // Step 4: Deduct payment
+        //  Deduct payment
         remaining -= paymentThisMonth;
 
-        // Step 5: Track total paid
+        //Track total paid
         totalPaid += paymentThisMonth;
 
         // Safety: prevent potential infinite loop due to floating point issues
@@ -100,18 +101,4 @@ export function calculateEMI(principal, monthlyRate, emi) {
     };
 }
 
-// ────────────────────────────────────────────────
-// Test Cases
-console.log(calculateEMI(10000, 0.01, 2000));
-// Example output: { months: 6, totalPaid: 10541.02, totalInterest: 541.02 } (approx)
 
-console.log(calculateEMI(10000, 0.05, 400));
-// → { months: -1, totalPaid: -1, totalInterest: -1 }
-
-console.log(calculateEMI(25000, 0.015, 3000));
-// Should finish in reasonable months
-
-console.log(calculateEMI(5000, 0.02, 100));
-// → -1 (because 100 < 100 interest in first month)
-
-console.log(calculateEMI(12000, 0.008, 1500));
