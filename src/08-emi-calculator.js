@@ -42,41 +42,76 @@
  *   // => { months: -1, totalPaid: -1, totalInterest: -1 }
  */
 export function calculateEMI(principal, monthlyRate, emi) {
-
-  if (
-    typeof principal !== "number" || principal <= 0 ||
-    typeof monthlyRate !== "number" || monthlyRate <= 0 ||
-    typeof emi !== "number" || emi <= 0
-  ) {
-    return { months: -1, totalPaid: -1, totalInterest: -1 }
-  }
-
-  let remaining = principal;
-  let months = 0;
-  let totalPaid = 0;
-  let totalInterest = 0;
-
-  while (remaining > 0.01) {
-
-    let interest = remaining * monthlyRate;
-
-    if (emi <= interest) {
-      return { months: -1, totalPaid: -1, totalInterest: -1 };
+    // Validation: all must be positive numbers
+    if (principal <= 0 || monthlyRate < 0 || emi <= 0 || 
+        isNaN(principal) || isNaN(monthlyRate) || isNaN(emi)) {
+        return { months: -1, totalPaid: -1, totalInterest: -1 };
     }
 
-    remaining += interest;
-    totalInterest += interest;
-
-    if (remaining <= emi) {
-      totalPaid += remaining;
-      remaining = 0;
-    } else {
-      remaining -= emi;
-      totalPaid += emi;
+    // Early check for infinite loop condition
+    const firstMonthInterest = principal * monthlyRate;
+    if (emi <= firstMonthInterest) {
+        return { months: -1, totalPaid: -1, totalInterest: -1 };
     }
 
-    months++;
-  }
+    let remaining = principal;
+    let months = 0;
+    let totalPaid = 0;
+    let totalInterest = 0;
 
-  return { months, totalPaid, totalInterest };
+    while (remaining > 0) {
+        months++;
+
+        // Step 1: Calculate interest on current remaining balance
+        const interestThisMonth = remaining * monthlyRate;
+        totalInterest += interestThisMonth;
+
+        // Step 2: Add interest to remaining balance
+        remaining += interestThisMonth;
+
+        // Step 3: Decide how much to pay this month
+        let paymentThisMonth;
+
+        if (remaining < emi) {
+            // Last month - pay only what's left
+            paymentThisMonth = remaining;
+        } else {
+            // Normal month - pay full EMI
+            paymentThisMonth = emi;
+        }
+
+        // Step 4: Deduct payment
+        remaining -= paymentThisMonth;
+
+        // Step 5: Track total paid
+        totalPaid += paymentThisMonth;
+
+        // Safety: prevent potential infinite loop due to floating point issues
+        if (months > 1200) { // max ~100 years
+            return { months: -1, totalPaid: -1, totalInterest: -1 };
+        }
+    }
+
+    // Round numbers to avoid floating point mess (2 decimal places)
+    return {
+        months: months,
+        totalPaid: Number(totalPaid.toFixed(2)),
+        totalInterest: Number(totalInterest.toFixed(2))
+    };
 }
+
+// ────────────────────────────────────────────────
+// Test Cases
+console.log(calculateEMI(10000, 0.01, 2000));
+// Example output: { months: 6, totalPaid: 10541.02, totalInterest: 541.02 } (approx)
+
+console.log(calculateEMI(10000, 0.05, 400));
+// → { months: -1, totalPaid: -1, totalInterest: -1 }
+
+console.log(calculateEMI(25000, 0.015, 3000));
+// Should finish in reasonable months
+
+console.log(calculateEMI(5000, 0.02, 100));
+// → -1 (because 100 < 100 interest in first month)
+
+console.log(calculateEMI(12000, 0.008, 1500));
